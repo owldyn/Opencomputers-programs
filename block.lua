@@ -8,8 +8,8 @@ end
 
 local Block = {}
 --- Initializes a block location
---- @param location table The current location. defaults to Location
---- @param facing number the current facing. defaults to Facing
+--- @param location table The current location
+--- @param facing number the current facing
 function Block:add(location, facing)
     local inst = {}
     setmetatable(inst, self)
