@@ -13,28 +13,6 @@ local function loadLocation()
     if ffile then Facing = serialization.unserialize(ffile:read "*a") end
 end
 loadLocation()
-local function shallow_copy(t)
-    local t2 = {}
-    for k,v in pairs(t) do
-        t2[k] = v
-    end
-    return t2
-end
-
-local Block = {}
---- Initializes a block location
---- @param location table The current location. defaults to Location
---- @param facing number the current facing. defaults to Facing
-function Block:add(location, facing)
-    local inst = {}
-    setmetatable(inst, self)
-    self._index = self
-
-    -- Need to deep copy so we don't modify the local copy when changing location.
-    inst._relative_location = shallow_copy(location) or shallow_copy(Location)
-    inst._relative_direction = facing or Facing
-    return inst
-end
 
 --- Adds each item in two tables together
 --- Must be two equally sized tables containing only numbers.
@@ -87,9 +65,11 @@ local function saveLocation()
         ffile:close()
     end
 end
+
+local Navigate = {}
 --- Sends the robot forwards and calculates that.
 --- @return boolean success Whether or not the movement was successful
-local function forward()
+function Navigate:forward()
     if robot.forward() then
         calculate_movement(Facing)
         saveLocation()
@@ -99,7 +79,7 @@ local function forward()
 end
 --- Sends the robot backwards and calculates that.
 --- @return boolean success Whether or not the movement was successful
-local function back()
+function Navigate:back()
     if robot.back() then
         calculate_movement((Facing + 2) % 4)
         saveLocation()
@@ -108,7 +88,7 @@ local function back()
     return false
 end
 
-local function up()
+function Navigate:up()
     if robot.up() then
         calculate_movement(-1)
         saveLocation()
@@ -117,7 +97,7 @@ local function up()
     return false
 end
 
-local function down()
+function Navigate:down()
     if robot.down() then
         calculate_movement(-2)
         saveLocation()
@@ -125,7 +105,7 @@ local function down()
     end
     return false
 end
-local function turnRight()
+function Navigate:turnRight()
     if robot.turnRight() then
         Facing = (Facing + 1) % 4
         saveLocation()
@@ -134,7 +114,7 @@ local function turnRight()
     return false
 end
 
-local function turnLeft()
+function Navigate:turnLeft()
     if robot.turnLeft() then
         Facing = (Facing - 1) % 4
         saveLocation()
@@ -145,27 +125,27 @@ end
 
 --- Turns to the given Facing
 --- @param direction number the direction to turn to
-local function turnTo(direction)
+function Navigate:turnTo(direction)
     local f = (Facing - direction) % 4
     if f == 0 then
         return true
     elseif f == 1 then
-        return turnLeft()
+        return Navigate:turnLeft()
     elseif f == 2 then
-        return turnRight() and turnRight()
+        return Navigate:turnRight() and Navigate:turnRight()
     elseif f == 3 then
-        return turnRight()
+        return Navigate:turnRight()
     end
 end
 
 --- Paths back to a Block
 --- @return boolean returned whether it was successful returning.
-local function returnToBlock(block)
+function Navigate:returnToBlock(block)
     -- This won't work if there's a roof over the block in question.
     local function move()
-        if not forward() then
-            if not up() then
-                return down()
+        if not Navigate:forward() then
+            if not Navigate:up() then
+                return Navigate:down()
             end
         end
         return true
@@ -175,11 +155,11 @@ local function returnToBlock(block)
     print(x)
     -- Equalize the X
     if x > Location[1] then
-        if not turnTo(0) then
+        if not Navigate:turnTo(0) then
             return false
         end
     elseif x < Location[1] then
-        if not turnTo(2) then
+        if not Navigate:turnTo(2) then
             return false
         end
     end
@@ -190,11 +170,11 @@ local function returnToBlock(block)
     end
     -- Equalize the Z
     if z > Location[3] then
-        if not turnTo(1) then
+        if not Navigate:turnTo(1) then
             return false
         end
     elseif z < Location[3] then
-        if not turnTo(3) then
+        if not Navigate:turnTo(3) then
             return false
         end
     end
@@ -205,10 +185,12 @@ local function returnToBlock(block)
     end
     while y ~= Location[2] do
         if y > Location[2] then
-            up()
+            Navigate:up()
         else
-            down()
+            Navigate:down()
         end
     end
-    return turnTo(block._relative_direction)
+    return Navigate:turnTo(block._relative_direction)
 end
+
+return Navigate
