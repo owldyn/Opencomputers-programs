@@ -1,16 +1,17 @@
 local robot = require("robot")
 local serialization = require("serialization")
+local Navigate = {}
 
 -- Set up the persistent location memory
 --fb ud, rl
-local Location = {0, 0, 0}
+Navigate.Location = {0, 0, 0}
 -- 0 = forwards, 1 = right, 2 = back, 3 = left
-local Facing = 0
+Navigate.Facing = 0
 local function loadLocation()
     local lfile = io.open("location.txt", "r")
     local ffile = io.open("facing.txt", "r")
-    if lfile then Location = serialization.unserialize(lfile:read "*a") end
-    if ffile then Facing = serialization.unserialize(ffile:read "*a") end
+    if lfile then Navigate.Location = serialization.unserialize(lfile:read "*a") end
+    if ffile then Navigate.Facing = serialization.unserialize(ffile:read "*a") end
 end
 loadLocation()
 
@@ -49,29 +50,28 @@ local function calculate_movement(direction)
     elseif direction == 3 then
         offset = {0, 0, -1}
     end
-    table_add(Location, offset)
-    return Location
+    table_add(Navigate.Location, offset)
+    return Navigate.Location
 end
 
 local function saveLocation()
     local lfile = io.open("location.txt", "w")
     if lfile then
-        lfile:write(serialization.serialize(Location))
+        lfile:write(serialization.serialize(Navigate.Location))
         lfile:close()
     end
     local ffile = io.open("facing.txt", "w")
     if ffile then
-        ffile:write(serialization.serialize(Facing))
+        ffile:write(serialization.serialize(Navigate.Facing))
         ffile:close()
     end
 end
 
-local Navigate = {}
 --- Sends the robot forwards and calculates that.
 --- @return boolean success Whether or not the movement was successful
 function Navigate:forward()
     if robot.forward() then
-        calculate_movement(Facing)
+        calculate_movement(Navigate.Facing)
         saveLocation()
         return true
     end
@@ -81,7 +81,7 @@ end
 --- @return boolean success Whether or not the movement was successful
 function Navigate:back()
     if robot.back() then
-        calculate_movement((Facing + 2) % 4)
+        calculate_movement((Navigate.Facing + 2) % 4)
         saveLocation()
         return true
     end
@@ -107,7 +107,7 @@ function Navigate:down()
 end
 function Navigate:turnRight()
     if robot.turnRight() then
-        Facing = (Facing + 1) % 4
+        Navigate.Facing = (Navigate.Facing + 1) % 4
         saveLocation()
         return true
     end
@@ -116,7 +116,7 @@ end
 
 function Navigate:turnLeft()
     if robot.turnLeft() then
-        Facing = (Facing - 1) % 4
+        Navigate.Facing = (Navigate.Facing - 1) % 4
         saveLocation()
         return true
     end
@@ -126,7 +126,7 @@ end
 --- Turns to the given Facing
 --- @param direction number the direction to turn to
 function Navigate:turnTo(direction)
-    local f = (Facing - direction) % 4
+    local f = (Navigate.Facing - direction) % 4
     if f == 0 then
         return true
     elseif f == 1 then
@@ -154,37 +154,37 @@ function Navigate:returnToBlock(block)
 
     print(x)
     -- Equalize the X
-    if x > Location[1] then
+    if x > Navigate.Location[1] then
         if not Navigate:turnTo(0) then
             return false
         end
-    elseif x < Location[1] then
+    elseif x < Navigate.Location[1] then
         if not Navigate:turnTo(2) then
             return false
         end
     end
-    while x ~= Location[1] do
+    while x ~= Navigate.Location[1] do
         if not move() then
             return false
         end
     end
     -- Equalize the Z
-    if z > Location[3] then
+    if z > Navigate.Location[3] then
         if not Navigate:turnTo(1) then
             return false
         end
-    elseif z < Location[3] then
+    elseif z < Navigate.Location[3] then
         if not Navigate:turnTo(3) then
             return false
         end
     end
-    while z ~= Location[3] do
+    while z ~= Navigate.Location[3] do
         if not move() then
             return false
         end
     end
-    while y ~= Location[2] do
-        if y > Location[2] then
+    while y ~= Navigate.Location[2] do
+        if y > Navigate.Location[2] then
             Navigate:up()
         else
             Navigate:down()
